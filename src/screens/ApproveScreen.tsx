@@ -5,8 +5,11 @@ import type { Replacement } from '../api/types';
 import { C } from '../theme';
 import { bytes } from '../ui';
 import { baseName } from './_fmt';
+import { useLang } from '../i18n';
+import ScreenHeader from '../components/ScreenHeader';
 
 export default function ApproveScreen() {
+  const { t } = useLang();
   const [list, setList] = useState<Replacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
@@ -26,36 +29,34 @@ export default function ApproveScreen() {
   }, [load]);
 
   const act = (id: number, fn: () => Promise<unknown>, msg: string) => {
-    Alert.alert('Xác nhận', msg, [
-      { text: 'Huỷ', style: 'cancel' },
-      {
-        text: 'Đồng ý',
-        style: 'destructive',
-        onPress: async () => {
-          setBusy(id);
-          try {
-            await fn();
-            await load();
-          } catch (e) {
-            Alert.alert('Lỗi', e instanceof Error ? e.message : String(e));
-          } finally {
-            setBusy(null);
-          }
-        },
-      },
+    Alert.alert(t('c_confirm'), msg, [
+      { text: t('c_cancel'), style: 'cancel' },
+      { text: t('c_ok'), onPress: () => void actRun(id, fn) },
     ]);
+  };
+
+  const actRun = async (id: number, fn: () => Promise<unknown>) => {
+    setBusy(id);
+    try {
+      await fn();
+      await load();
+    } catch (e) {
+      Alert.alert(t('c_error'), e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
   };
 
   if (loading) return <ActivityIndicator style={{ marginTop: 80 }} color={C.accent} />;
 
   return (
     <View style={styles.page}>
-      <Text style={styles.h1}>Cần bạn quyết</Text>
+      <ScreenHeader title={t('t_approve')} />
       <FlatList
         data={list}
         keyExtractor={(r) => String(r.id)}
         contentContainerStyle={{ padding: 12, gap: 10 }}
-        ListEmptyComponent={<Text style={styles.empty}>Không có bản ghi nào chờ approve.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('ap_none')}</Text>}
         renderItem={({ item }) => {
           const saving = item.sourceSizeBytes && item.outputSizeBytes
             ? Math.round((1 - item.outputSizeBytes / item.sourceSizeBytes) * 100)
@@ -73,16 +74,16 @@ export default function ApproveScreen() {
                 <Pressable
                   style={[styles.btn, styles.approve, busy === item.id && { opacity: 0.5 }]}
                   disabled={busy === item.id}
-                  onPress={() => act(item.id, () => approveReplacement(item.id), 'Duyệt & thay thế file gốc? (bản gốc vào Quarantine)')}
+                  onPress={() => act(item.id, () => approveReplacement(item.id), `${t('jd_replace')}?`)}
                 >
-                  <Text style={styles.btnText}>Approve</Text>
+                  <Text style={styles.btnText}>{t('ap_approve')}</Text>
                 </Pressable>
                 <Pressable
                   style={[styles.btn, styles.rollbackBtn, busy === item.id && { opacity: 0.5 }]}
                   disabled={busy === item.id}
-                  onPress={() => act(item.id, () => rollbackReplacement(item.id), 'Hoàn tác, giữ bản gốc?')}
+                  onPress={() => act(item.id, () => rollbackReplacement(item.id), `${t('ap_rollback')}?`)}
                 >
-                  <Text style={styles.btnText}>Roll back</Text>
+                  <Text style={styles.btnText}>{t('ap_rollback')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -95,7 +96,6 @@ export default function ApproveScreen() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
-  h1: { color: C.text, fontSize: 22, fontWeight: '700', padding: 16, paddingBottom: 4 },
   empty: { color: C.muted, textAlign: 'center', marginTop: 40 },
   card: { backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 12, padding: 12 },
   title: { color: C.text, fontSize: 15, fontWeight: '600' },

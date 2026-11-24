@@ -4,32 +4,35 @@ import type { Job } from '../api/types';
 import type { JobsScreenProps } from '../nav';
 import { C } from '../theme';
 import { bytes } from '../ui';
+import { useLang } from '../i18n';
+import ScreenHeader from '../components/ScreenHeader';
 
 export default function JobsScreen({ navigation }: JobsScreenProps) {
+  const { t } = useLang();
   const { jobs, refresh, mode, error } = useJobsConnection();
 
   return (
     <View style={styles.page}>
-      <View style={styles.head}>
-        <Text style={styles.h1}>Jobs</Text>
-        <Text style={styles.modeBanner}>{mode === 'signalr' ? '● live' : mode === 'poll' ? '◌ poll' : 'off'}</Text>
-      </View>
+      <ScreenHeader title={t('t_jobs')} />
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <FlatList
         data={jobs}
         keyExtractor={(j) => String(j.id)}
         contentContainerStyle={{ padding: 12, gap: 10 }}
         refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={C.muted} />}
-        ListEmptyComponent={<Text style={styles.empty}>Chưa có job nào.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>{t('jobs_empty')}</Text>}
         renderItem={({ item }) => (
-          <JobRow job={item} onPress={() => navigation.navigate('JobDetail', { jobId: item.id })} />
+          <JobRow job={item} t={t} onPress={() => navigation.navigate('JobDetail', { jobId: item.id })} />
         )}
       />
+      <Text style={styles.banner}>{mode === 'signalr' ? '● live' : mode === 'poll' ? '◌ poll' : 'off'}</Text>
     </View>
   );
 }
 
-function JobRow({ job, onPress }: { job: Job; onPress: () => void }) {
+type T = ReturnType<typeof useLang>['t'];
+
+function JobRow({ job, onPress, t }: { job: Job; onPress: () => void; t: T }) {
   return (
     <View style={styles.card} onTouchEnd={onPress}>
       <View style={styles.cardRow}>
@@ -38,10 +41,10 @@ function JobRow({ job, onPress }: { job: Job; onPress: () => void }) {
         {job.workerName ? <Text style={styles.worker}>@{job.workerName}</Text> : null}
       </View>
       <Text style={styles.title} numberOfLines={2}>
-        {job.relativePath ?? job.title ?? '(không có tên)'}
+        {job.relativePath ?? job.title ?? t('untitled')}
       </Text>
       <View style={styles.cardRow}>
-        <Text style={styles.meta}>{job.videoEncoder ?? '— echo…'} · {stageOf(job)}</Text>
+        <Text style={styles.meta}>{job.videoEncoder ?? '—'} · {stageOf(job, t)}</Text>
       </View>
       {typeof job.progress === 'number' ? (
         <View style={styles.progressTrack}>
@@ -55,13 +58,19 @@ function JobRow({ job, onPress }: { job: Job; onPress: () => void }) {
   );
 }
 
-function stageOf(job: Job): string {
+function stageOf(job: Job, t: T): string {
   if (job.status === 'Failed') return job.reason ?? 'failed';
   if (job.status === 'Completed') return 'done';
   return job.stage ?? job.status ?? '';
 }
 
-function Badge({ text, tone }: { text: string; tone: string }) {
+function jobTone(status?: string): 'error' | 'success' | 'active' {
+  if (status === 'Failed') return 'error';
+  if (status === 'Completed') return 'success';
+  return 'active';
+}
+
+function Badge({ text, tone }: { text: string; tone: 'error' | 'success' | 'active' }) {
   const color = tone === 'error' ? C.bad : tone === 'success' ? C.good : C.accent;
   return (
     <View style={[styles.badge, { backgroundColor: color + '22', borderColor: color }]}>
@@ -70,20 +79,13 @@ function Badge({ text, tone }: { text: string; tone: string }) {
   );
 }
 
-function jobTone(status?: string): string {
-  if (status === 'Failed') return 'error';
-  if (status === 'Completed') return 'success';
-  return 'active';
-}
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 4 },
-  h1: { color: C.text, fontSize: 22, fontWeight: '700' },
-  modeBanner: { color: C.muted, fontSize: 13 },
   error: { color: C.bad, paddingHorizontal: 16, paddingBottom: 4 },
+  banner: { color: C.muted, fontSize: 12, textAlign: 'center', paddingVertical: 4 },
   empty: { color: C.muted, textAlign: 'center', marginTop: 40 },
   card: { backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 12, padding: 12 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   id: { color: C.muted, fontSize: 13 },
   worker: { color: C.accent, fontSize: 13 },
   title: { color: C.text, fontSize: 15, fontWeight: '600', marginTop: 6 },

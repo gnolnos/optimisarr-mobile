@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Text } from 'react-native';
 import type { RootStackParamList, TabParamList } from './src/nav';
 import { C } from './src/theme';
+import { LanguageProvider } from './src/i18n';
 
 import StatusScreen from './src/screens/StatusScreen';
 import JobsScreen from './src/screens/JobsScreen';
@@ -54,12 +55,14 @@ function Tabs() {
 
 export default function App() {
   return (
-    <NavigationContainer theme={darkTheme}>
-      <StatusBar style="light" />
-      <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: C.card }, headerTintColor: C.text }}>
-        <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
-        <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: 'Chi tiết job' }} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <LanguageProvider>
+      <NavigationContainer theme={darkTheme}>
+        <StatusBar style="light" />
+        <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: C.card }, headerTintColor: C.text }}>
+          <Stack.Screen name="Tabs" component={Tabs} options={{ headerShown: false }} />
+          <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: 'Chi tiết job' }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </LanguageProvider>
   );
 }

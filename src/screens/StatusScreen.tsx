@@ -3,8 +3,11 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { queueStatus, queuePause, queueResume, stats } from '../api/endpoints';
 import type { QueueStatus, Stats } from '../api/types';
 import { C } from '../theme';
+import { useLang } from '../i18n';
+import ScreenHeader from '../components/ScreenHeader';
 
 export default function StatusScreen() {
+  const { t } = useLang();
   const [q, setQ] = useState<QueueStatus | null>(null);
   const [s, setS] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,31 +34,33 @@ export default function StatusScreen() {
       const next = q?.paused ? await queueResume() : await queuePause();
       setQ(next);
     } catch (e) {
-      Alert.alert('Lỗi', e instanceof Error ? e.message : String(e));
+      Alert.alert(t('c_error'), e instanceof Error ? e.message : String(e));
     }
   };
 
   return (
-    <ScrollView style={styles.page} contentContainerStyle={styles.body}>
-      <Text style={styles.h1}>Trạng thái</Text>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+    <View style={styles.page}>
+      <ScreenHeader title={t('t_status')} />
+      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <View style={styles.row}>
-        <Card label="Đang xử lý" value={String(s?.running ?? '—')} />
-        <Card label="Chờ" value={String(s?.queued ?? '—')} />
-        <Card label="Sẵn sàng thay" value={String(s?.readyToReplace ?? '—')} />
-      </View>
+        <View style={styles.row}>
+          <Card label={t('st_running')} value={String(s?.running ?? '—')} />
+          <Card label={t('st_queued')} value={String(s?.queued ?? '—')} />
+          <Card label={t('st_ready')} value={String(s?.readyToReplace ?? '—')} />
+        </View>
 
-      <Card label="File đã tối ưu" value={String(s?.filesOptimised ?? '—')} />
-      <Card label="Tiết kiệm dung lượng" value={fmtBytes(s?.bytesSaved)} big />
-      <Card label="Mức tiết kiệm trung bình" value={`${(s?.averageSavingPercent ?? 0).toFixed(1)}%`} />
+        <Card label={t('st_optimised')} value={String(s?.filesOptimised ?? '—')} />
+        <Card label={t('st_saved')} value={fmtBytes(s?.bytesSaved)} big />
+        <Card label={t('st_avg')} value={`${(s?.averageSavingPercent ?? 0).toFixed(1)}%`} />
 
-      {q?.blockedReason ? <Text style={styles.warn}>Queue dừng: {q.blockedReason}</Text> : null}
+        {q?.blockedReason ? <Text style={styles.warn}>{t('st_blocked')} {q.blockedReason}</Text> : null}
 
-      <Pressable style={[styles.btn, q?.paused ? styles.resume : styles.pause]} onPress={togglePause}>
-        <Text style={styles.btnText}>{q?.paused ? '▶ Tiếp tục' : '⏸ Tạm dừng queue'}</Text>
-      </Pressable>
-    </ScrollView>
+        <Pressable style={[styles.btn, q?.paused ? styles.resume : styles.pause]} onPress={togglePause}>
+          <Text style={styles.btnText}>{q?.paused ? t('st_resume') : t('st_pause')}</Text>
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -82,8 +87,7 @@ function fmtBytes(n?: number): string {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: C.bg },
-  body: { padding: 16, gap: 12 },
-  h1: { color: C.text, fontSize: 22, fontWeight: '700', marginBottom: 4 },
+  body: { padding: 16, gap: 12, paddingTop: 4 },
   error: { color: C.bad, marginBottom: 8 },
   warn: { color: C.warn, fontSize: 12.5, marginBottom: 4 },
   row: { flexDirection: 'row', gap: 10 },

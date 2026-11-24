@@ -52,7 +52,7 @@ export function useJobsConnection(pollMs = 5000) {
 
     return () => {
       active = false;
-      if (hub) void hub.stop();
+      if (hub) void hub.stop().catch(() => {});
       if (timer) clearInterval(timer);
     };
   }, [pollMs, refresh]);
