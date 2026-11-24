@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Alert, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getBaseUrl, getMode, getToken, setBaseUrl, setMode, setToken, type NetMode } from '../config';
 import { queueStatus } from '../api/endpoints';
 import { ApiError } from '../api/client';
@@ -20,7 +20,9 @@ export default function SettingsScreen() {
     setTokenState(tk);
     setModeState(md);
   };
-  void load();
+  useEffect(() => {
+    void load();
+  }, []);
 
   const isHttp = /^http:\/\//i.test(url.trim());
   const isHttps = /^https:\/\//i.test(url.trim());
@@ -93,9 +95,8 @@ export default function SettingsScreen() {
   ];
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={styles.page}>
-        <ScreenHeader title={t('t_settings')} />
+    <View style={styles.page}>
+      <ScreenHeader title={t('t_settings')} />
         <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.body}>
           <Text style={styles.label}>{t('set_mode')}</Text>
           <View style={styles.segRow}>
@@ -155,8 +156,7 @@ export default function SettingsScreen() {
 
           <Text style={styles.note}>{t('set_foot')}</Text>
         </ScrollView>
-      </View>
-    </TouchableWithoutFeedback>
+    </View>
   );
 }
 
