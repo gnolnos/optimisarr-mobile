@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, Text, View, RefreshControl } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View, RefreshControl } from 'react-native';
 import { useJobsConnection } from '../hooks/useJobsConnection';
 import type { Job } from '../api/types';
 import type { JobsScreenProps } from '../nav';
@@ -33,8 +33,10 @@ export default function JobsScreen({ navigation }: JobsScreenProps) {
 type T = ReturnType<typeof useLang>['t'];
 
 function JobRow({ job, onPress, t }: { job: Job; onPress: () => void; t: T }) {
+  // Pressable (not View onTouchEnd): a scroll release must not count as a tap, and onPress is the
+  // only handler React Native fires for a genuine touch that ends where it started.
   return (
-    <View style={styles.card} onTouchEnd={onPress}>
+    <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={onPress}>
       <View style={styles.cardRow}>
         <Badge tone={jobTone(job.status)} text={job.status ?? '?'} />
         <Text style={styles.id}>#{job.id}</Text>
@@ -54,7 +56,7 @@ function JobRow({ job, onPress, t }: { job: Job; onPress: () => void; t: T }) {
       <Text style={styles.meta2}>
         {bytes(job.sourceSizeBytes)} → {bytes(job.outputSizeBytes)}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -85,6 +87,7 @@ const styles = StyleSheet.create({
   banner: { color: C.muted, fontSize: 12, textAlign: 'center', paddingVertical: 4 },
   empty: { color: C.muted, textAlign: 'center', marginTop: 40 },
   card: { backgroundColor: C.card, borderColor: C.border, borderWidth: 1, borderRadius: 12, padding: 12 },
+  cardPressed: { opacity: 0.7, backgroundColor: C.accent + '12' },
   cardRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   id: { color: C.muted, fontSize: 13 },
   worker: { color: C.accent, fontSize: 13 },

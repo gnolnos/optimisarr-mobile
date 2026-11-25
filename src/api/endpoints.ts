@@ -1,4 +1,5 @@
 import { api, ApiOptions } from './client';
+import { getBaseUrl, getToken } from '../config';
 import type {
   Job,
   QueueStatus,
@@ -37,6 +38,27 @@ export const approveReplacement = (id: number) =>
   api<Replacement>(`/api/replacements/${id}/approve`, { method: 'POST' });
 export const rollbackReplacement = (id: number) =>
   api<Replacement>(`/api/replacements/${id}/rollback`, { method: 'POST' });
+
+// ---- Raw streaming for the A/B comparison players ---------------------------------------------
+// The video player cannot go through the fetch-based `api` client; it needs a URL plus headers, so
+// these hand it an expo-video source directly. Range-enabled on the server, seekable on the device.
+export interface StreamSource {
+  uri: string;
+  headers?: Record<string, string>;
+}
+
+const trimSlash = (s: string) => s.replace(/\/+$/, '');
+
+export const replacementStreamSource = async (
+  id: number,
+  which: 'original' | 'replacement',
+): Promise<StreamSource> => {
+  const [base, token] = await Promise.all([getBaseUrl(), getToken()]);
+  return {
+    uri: `${trimSlash(base)}/api/replacements/${id}/${which}/content`,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  };
+};
 
 // ---- Workers / pairing
 export const workers = () => api<Worker[]>('/api/workers');
