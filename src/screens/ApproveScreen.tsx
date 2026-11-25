@@ -22,6 +22,9 @@ export default function ApproveScreen() {
   const [list, setList] = useState<Replacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<number | null>(null);
+  // Only one A/B panel is open at a time, so opening another stops (unmounts) the previous one and
+  // releases its player — a bookmark that guards LAN bandwidth when several items await a decision.
+  const [compareId, setCompareId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -73,6 +76,8 @@ export default function ApproveScreen() {
             busy={busy === item.id}
             onApprove={() => act(item.id, () => approveReplacement(item.id), `${t('jd_replace')}?`)}
             onRollback={() => act(item.id, () => rollbackReplacement(item.id), `${t('ap_rollback')}?`)}
+            open={compareId === item.id}
+            onToggleCompare={() => setCompareId((v) => (v === item.id ? null : item.id))}
           />
         )}
       />
@@ -86,20 +91,23 @@ function ApproveCard({
   busy,
   onApprove,
   onRollback,
+  open,
+  onToggleCompare,
 }: {
   item: Replacement;
   t: T;
   busy: boolean;
   onApprove: () => void;
   onRollback: () => void;
+  open: boolean;
+  onToggleCompare: () => void;
 }) {
-  const [showCompare, setShowCompare] = useState(false);
   const [sources, setSources] = useState<{ orig: StreamSource; enc: StreamSource } | null>(null);
 
-  // Load the two streamable URLs only when the operator asks to compare, so an idle list does not
-  // open (or keep) connections to the video for every pending replacement.
+  // Load the two streamable URLs only while this card's panel is the open one; closing it drops
+  // them (the players unmount and release) instead of keeping a socket open per pending item.
   useEffect(() => {
-    if (!showCompare) return;
+    if (!open) return;
     let alive = true;
     void Promise.all([
       replacementStreamSource(item.id, 'original'),
@@ -112,7 +120,7 @@ function ApproveCard({
     return () => {
       alive = false;
     };
-  }, [showCompare, item.id]);
+  }, [open, item.id]);
 
   const saving =
     item.sourceSizeBytes && item.outputSizeBytes
@@ -130,23 +138,23 @@ function ApproveCard({
       </Text>
       <View style={styles.row3}>
         <Pressable style={[styles.btn, styles.approve, busy && { opacity: 0.5 }]} disabled={busy} onPress={onApprove}>
-          <Text style={styles.btnText}>{t('jd_replace')}</Text>
+          <Text style={styles.approveText}>{t('jd_replace')}</Text>
         </Pressable>
         <Pressable style={[styles.btn, styles.rollbackBtn, busy && { opacity: 0.5 }]} disabled={busy} onPress={onRollback}>
           <Text style={styles.btnText}>{t('ap_rollback')}</Text>
         </Pressable>
         <Pressable
-          style={[styles.btn, styles.ghostBtn, showCompare && styles.ghostActive]}
-          onPress={() => setShowCompare((v) => !v)}
+          style={[styles.btn, styles.ghostBtn, open && styles.ghostActive]}
+          onPress={onToggleCompare}
         >
-          <Text style={[styles.btnText, showCompare && styles.ghostActiveText]}>{t('ap_compare')}</Text>
+          <Text style={[styles.btnText, open && styles.ghostActiveText]}>{t('ap_compare')}</Text>
         </Pressable>
       </View>
-      {showCompare ? (
+      {open ? (
         sources ? (
           <ABCompare
-            top={{ label: t('ab_original'), src: sources.orig, sizeBytes: item.sourceSizeBytes }}
-            bottom={{ label: t('ab_encoded'), src: sources.enc, sizeBytes: item.outputSizeBytes }}
+            top={{ label: t('ab_encoded'), src: sources.enc, sizeBytes: item.outputSizeBytes }}
+            bottom={{ label: t('ab_original'), src: sources.orig, sizeBytes: item.sourceSizeBytes }}
           />
         ) : (
           <ActivityIndicator style={{ marginTop: 26 }} color={C.accent} />
@@ -169,5 +177,6 @@ const styles = StyleSheet.create({
   ghostBtn: { backgroundColor: C.card, borderColor: C.accent, borderWidth: 1 },
   ghostActive: { backgroundColor: C.accent + '22' },
   ghostActiveText: { color: C.accent },
-  btnText: { color: '#10131a', fontWeight: '700', fontSize: 13 },
+  btnText: { color: C.text, fontWeight: '700', fontSize: 13 },
+  approveText: { color: '#10131a', fontWeight: '700', fontSize: 13 },
 });
