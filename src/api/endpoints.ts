@@ -1,5 +1,5 @@
 import { api, ApiOptions } from './client';
-import { getBaseUrl, getToken } from '../config';
+import { getBaseUrl } from '../config';
 import type {
   Job,
   QueueStatus,
@@ -49,15 +49,21 @@ export interface StreamSource {
 
 const trimSlash = (s: string) => s.replace(/\/+$/, '');
 
+// Ask the server for a short-lived, single-file signed URL to a media /content path. The native
+// player (iOS/Android AVPlayer) cannot attach an Authorization header, so the app authenticates the
+// sign request with the normal api client (fetch → Bearer works fine on every platform) and hands
+// the bounded URL straight to the player — no header needed, and never the admin token in a URL.
+export const streamSign = (relativePath: string) =>
+  api<{ url: string }>(`/api/stream/sign?path=${encodeURIComponent(relativePath)}`);
+
 export const replacementStreamSource = async (
   id: number,
   which: 'original' | 'replacement',
 ): Promise<StreamSource> => {
-  const [base, token] = await Promise.all([getBaseUrl(), getToken()]);
-  return {
-    uri: `${trimSlash(base)}/api/replacements/${id}/${which}/content`,
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-  };
+  const relative = `/api/replacements/${id}/${which}/content`;
+  const { url } = await streamSign(relative); // url is relative; prefix the base for the player.
+  const base = await getBaseUrl();
+  return { uri: `${trimSlash(base)}${url.startsWith('/') ? url : `/${url}`}` };
 };
 
 // ---- Workers / pairing
